@@ -4,20 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1976d2">
-<!-- PWA（2026-09-25 v2.9.12）：装到桌面 / 独立窗口打开 -->
+<!-- PWA（2026-09-25 v2.9.15）：装到桌面 / 独立窗口打开 -->
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>Uchat</title>
-<link rel="stylesheet" href="css/light.css?v=202609250945">
-<link rel="stylesheet" href="css/dark.css?v=202609250945">
-<script src="vendor/marked/marked.min.js?v=202609250945"></script>
-<script src="vendor/highlight/highlight.min.js?v=202609250945"></script>
-<link rel="stylesheet" href="vendor/highlight/styles/github-dark.min.css?v=202609250945">
-<link rel="stylesheet" href="vendor/katex/katex.min.css?v=202609250945">
-<script src="vendor/katex/katex.min.js?v=202609250945"></script>
-<script src="vendor/katex/contrib/auto-render.min.js?v=202609250945"></script>
+<link rel="stylesheet" href="css/light.css?v=202609251027">
+<link rel="stylesheet" href="css/dark.css?v=202609251027">
+<script src="vendor/marked/marked.min.js?v=202609251027"></script>
+<script src="vendor/highlight/highlight.min.js?v=202609251027"></script>
+<link rel="stylesheet" href="vendor/highlight/styles/github-dark.min.css?v=202609251027">
+<link rel="stylesheet" href="vendor/katex/katex.min.css?v=202609251027">
+<script src="vendor/katex/katex.min.js?v=202609251027"></script>
+<script src="vendor/katex/contrib/auto-render.min.js?v=202609251027"></script>
 <style>
 /* ===== Global Reset & Layout ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,7 +76,7 @@ a:hover { color: var(--accent-hover); }
 #main-app.hidden { display: none; }
 
 /* Toolbar — above input area (WeChat style) */
-/* ===== 内联音频播放器（v2.9.12）===== */
+/* ===== 内联音频播放器（v2.9.15）===== */
 /* 全部用主题变量（light.css / dark.css 里都有），暗色模式自动适配 */
 .msg-audio-card { margin-top: 4px; padding: 6px 8px; border: 1px solid var(--border-light);
     border-radius: 8px; background: var(--bg-secondary); max-width: min(100%, 420px); }
@@ -709,7 +709,7 @@ a { transition: color 0.15s; }
 <!-- Login Overlay -->
 <div id="login-overlay">
     <div class="login-card">
-        <h1>Uchat <span id="login-version-span" style="font-size:11px;font-weight:400;opacity:0.5">v2.9.12</span></h1>
+        <h1>Uchat <span id="login-version-span" style="font-size:11px;font-weight:400;opacity:0.5">v2.9.15</span></h1>
         <p class="subtitle">Develop · Test by HGDTeam</p>
         <div class="tabs">
             <button class="tab active" data-tab="login">登录</button>
@@ -847,7 +847,7 @@ a { transition: color 0.15s; }
     </div>
 </div>
 
-<!-- Music Room Floating Panel（v2.9.12：本地音频 / 网易云链接 + 真同步 + 版权兜底） -->
+<!-- Music Room Floating Panel（v2.9.15：本地音频 / 网易云链接 + 真同步 + 版权兜底） -->
 <div id="music-room" style="display:none;position:fixed;bottom:120px;right:16px;z-index:800;background:#1a1a2e;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);width:480px;overflow:hidden;flex-direction:column">
     <div id="music-room-header" style="display:flex;align-items:center;gap:8px;padding:10px 16px;color:#fff;font-size:14px;background:rgba(0,0,0,0.3);cursor:move">
         <span>🎵 听歌房</span>
@@ -1256,11 +1256,11 @@ a { transition: color 0.15s; }
 </style>
 
 <!-- Scripts -->
-<script src="config.js?v=202609250945"></script>
-<script src="js/app.js?v=202609250945"></script>
-<script src="js/chat.js?v=202609250945"></script>
-<script src="js/webrtc.js?v=202609250945"></script>
-<script src="js/screen.js?v=202609250945"></script>
-<script src="js/file.js?v=202609250945"></script>
+<script src="config.js?v=202609251027"></script>
+<script src="js/app.js?v=202609251027"></script>
+<script src="js/chat.js?v=202609251027"></script>
+<script src="js/webrtc.js?v=202609251027"></script>
+<script src="js/screen.js?v=202609251027"></script>
+<script src="js/file.js?v=202609251027"></script>
 </body>
 </html>

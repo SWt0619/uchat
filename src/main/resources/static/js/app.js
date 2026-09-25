@@ -38,7 +38,7 @@ const sendBtn = $('send-btn');
 const userList = $('user-list');
 const userCount = $('user-count');
 const emojiPicker = $('emoji-picker');
-const APP_VERSION = '2.9.12';   // 版本号单一来源（教程与登录页共用）
+const APP_VERSION = '2.9.15';   // 版本号单一来源（教程与登录页共用）
 const contextMenu = $('context-menu');
 const toast = $('toast');
 
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ==================== PWA：装到桌面（2026-09-25 v2.9.12） ====================
+// ==================== PWA：装到桌面（2026-09-25 v2.9.15） ====================
 // Service Worker 是"可安装"的前提；策略是网络优先（见 sw.js），不会让用户看到旧版本。
 var _installPrompt = null;
 function initPwa() {
@@ -2136,7 +2136,7 @@ $('btn-files-view').addEventListener('click', async () => {
 });
 
 /**
- * 文件总览里的音频/视频内联播放（2026-09-25 v2.9.12）
+ * 文件总览里的音频/视频内联播放（2026-09-25 v2.9.15）
  * 用同一个 /api/files/preview/<name>（服务端已支持 HTTP Range ⇒ 可拖动进度、按需分段加载）。
  * 再点一次就收起来，避免同时在放好几个。
  */
@@ -2164,7 +2164,7 @@ $('files-modal').addEventListener('click', e => {
     if (e.target === $('files-modal')) $('files-modal').style.display = 'none';
 });
 
-// ==================== Music Room（v2.9.12：本地音频/网易云 + 真同步 + 版权兜底） ====================
+// ==================== Music Room（v2.9.15：本地音频/网易云 + 真同步 + 版权兜底） ====================
 // 设计要点
 //   ① **真同步**：服务端给出当前曲目的服务器起点 startedAt 与其自身时钟 serverTime，
 //      每个客户端算 expected = (serverNow - startedAt)/1000（秒）→ seek 到该位置。

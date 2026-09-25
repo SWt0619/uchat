@@ -4,6 +4,8 @@
 
 > 适合：想在**自己电脑/小服务器**上给几个朋友开一个私密聊天室，不依赖任何第三方服务。（默认最大16人，可以自行更改上限）
 
+> 开发说明：本项目的代码主要由 AI 编程助手产出，需求、验收标准、部署与运维由作者负责。
+
 ---
 
 ## 功能
@@ -35,6 +37,30 @@
 - 静默运行：一条 `静默运行Uchat.vbs` 后台跑服务 + 看门狗 + 托盘状态图标，**0 个可见窗口**
 
 ---
+
+## 容量与上限
+
+数值都写死在代码或配置里（括号内是位置）；**主聊天室单房间 16 人**。
+
+| 项目 | 上限 | 位置 / 备注 |
+|---|---|---|
+| 主聊天室在线人数 | **16 人** | `ChatWebSocketHandler.MAX_CLIENTS`；`data/room.dat` 表头也记着这个值，**已有该文件时以文件里的 `maxCapacity` 为准** |
+| 聊天消息历史 | **200 条** | `Room.MAX_HISTORY`（内存 + `data/room.dat`，超出丢最旧） |
+| 单条消息长度 | 5000 字符 | `chat.max-message-length` |
+| 图片上传 | ≤ **10 MB/张** | `FileController.MAX_IMAGE_SIZE` |
+| 其他文件上传 | ≤ **100 MB/个** | `FileController.MAX_FILE_SIZE`（`spring.servlet.multipart.*` 同步限制 100MB） |
+| 聊天室存储总量 | **50 GB** | `chat.files.max-total-gb`；超过**禁止上传**并提示联系管理员（不静默删文件） |
+| 听歌房本地上传 | ≤ **30 MB/首**、最多保留 **40 个** | `MusicController.MAX_MUSIC_SIZE` / `KEEP_FILES`（超出自动删最旧） |
+| 听歌房同时在线 | **4 人** | `ChatWebSocketHandler.MUSIC_ROOM_MAX`（轮流点歌） |
+| 私聊离线落盘 | 全局 **2000 条** / 单个收件人 **200 条** | `PrivateStore.MAX_TOTAL` / `MAX_PER_USER`（超出丢最旧并如实告知） |
+| 语音通话房间 | 1 号房 **12 人**、2 号房 **6 人** | `VOICE_ROOM1_MAX` / `VOICE_ROOM2_MAX` |
+| 视频通话房间 | 1 号房 **8 人**、2 号房 **6 人** | `VIDEO_ROOM1_MAX` / `VIDEO_ROOM2_MAX` |
+| 通话掉线宽限 | **45 秒** | `chat.call.grace-ms`（断网回来不掉出通话） |
+| 信令限流 | **60 条/秒**、单帧 **32 KB** | `chat.signaling.max-per-sec` / `max-payload-bytes` |
+
+> 屏幕共享与通话是 **P2P 网状**：共享者上行 ≈ 观看人数 × 每路码率，人多了需要 TURN 中继。
+> 这套规模是按"几个人的小房间"设计的，不是万人群。
+
 
 ## 技术栈
 
@@ -91,6 +117,7 @@ mvn -B clean package
 | `allowed-origins.pwd` | 允许的跨域来源，逗号分隔 | 仅允许本机同源 |
 | `admins.pwd` | 管理员昵称，逗号分隔（用户列表高亮/角色） | 没有管理员角色 |
 | `turn/turn.pwd` | TURN 共享密钥 | 只走公开中继 |
+| `turn/turn.json` | **TURN 服务自身的配置**（port/realm/user/password）—— 仓库只提供 `turn/turn.json.example`，复制成 `turn/turn.json` 并改成你自己的口令 | TURN 服务拒绝启动（日志会提示） |
 | `bot/bot_login.pwd`、`bot2/bot_login.pwd` | 两个 AI 账号的登录密码 | 用 `UCHAT_BOT_PASSWORD` 环境变量 |
 | `bot/dsapi.txt`（或 `DEEPSEEK_API_KEY`） | DeepSeek API key，第 1 行给 bot1、第 2 行给 bot2 | AI 用户不启动（聊天室照常） |
 

@@ -13,7 +13,7 @@ if not defined UCHAT_ADMINS if exist "%~dp0admins.pwd" set /p UCHAT_ADMINS=<"%~d
 title Uchat Server
 
 echo ==========================================
-echo   Uchat 聊天室服务端 v2.9.12
+echo   Uchat 聊天室服务端 v2.9.15
 echo ==========================================
 echo.
 

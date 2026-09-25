@@ -559,13 +559,13 @@ function createScreenOfferFor(targetNick) {
 
 /**
  * 屏幕共享码率上限。旧版不设上限，共享端会把上行全部吃满，通话视频/音频被挤掉。
- * 15/30fps 档 1.5 Mbps、60fps 档 3 Mbps、90/120fps 档 5 Mbps。
+ * 帧率 24-48fps 档 1.5 Mbps、60fps 档 3 Mbps（旧版 90/120fps 档随选项一起移除）。
  */
 function applyScreenBitrate(pc) {
     var sender = pc.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
     if (!sender) return;
     var fps = screenFps || 24;
-    var cap = fps >= 90 ? 5000000 : (fps >= 60 ? 3000000 : 1500000);
+    var cap = fps >= 60 ? 3000000 : 1500000;   // 帧率选项只有 24/36/48/60，旧的 90/120 档已移除
     try {
         var p = sender.getParameters();
         if (!p.encodings || !p.encodings.length) p.encodings = [{}];
@@ -581,7 +581,7 @@ function applyScreenBitrate(pc) {
 // 每路码率上限与 applyScreenBitrate 的 cap 同源（只跟帧率有关，与 480p/720p/1080p 无关）
 function screenPerViewerMbps() {
     var fps = screenFps || 24;
-    var cap = fps >= 90 ? 5000000 : (fps >= 60 ? 3000000 : 1500000);
+    var cap = fps >= 60 ? 3000000 : 1500000;   // 帧率选项只有 24/36/48/60，旧的 90/120 档已移除
     var audio = (screenStream && screenStream.getAudioTracks().length > 0) ? 128000 : 0;   // 系统音频约 128 kbps
     return (cap + audio) / 1e6;
 }
