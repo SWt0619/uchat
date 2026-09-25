@@ -1,0 +1,16 @@
+# 统一换行策略。
+# 关键：给 cmd.exe 用的批处理必须是 CRLF —— 若克隆后变成 LF，
+# cmd 解析多行 if/goto 会错乱（本项目已踩过这个坑）。
+* text=auto
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# 二进制，别做换行/差异处理
+*.jar  binary
+*.p12  binary
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.woff2 binary
+*.woff binary
