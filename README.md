@@ -25,7 +25,7 @@
 - 真同步：服务端下发起点时间戳，听众按 `serverTime` 对齐；点歌人上报时长用于精确排下一首；放不出来会广播提示并自动跳过
 
 **AI 用户**
-- 两个可选机器人（默认叫「大肥鱼」「资料鱼」），基于 DeepSeek API，@ 触发或按概率插话，带**上下文记忆**（落盘 `bot.history.json`）。**不配 API key 就不启动，不影响聊天室本身**
+- 两个可选机器人，基于 DeepSeek API（或者你也可以自行接入其他模型），@ 触发或按概率插话，带**上下文记忆**（落盘 `bot.history.json`）。**不配 API key 就不启动，不影响聊天室本身**
 
 **其它**
 - 手机端适配：抽屉式用户列表、行内 @ / 私聊按钮、输入框不被键盘挡、整屏私聊窗口
@@ -125,9 +125,6 @@ bun dev/t5_harness.js --scenario s1 # 离线私聊等可靠性场景
 bun dev/_files_media_test.js    # 鉴权 / Range 播放 / 50GB 配额
 bun dev/_pwa_test.js            # PWA 可安装性（Chrome 官方判定）
 ```
-
-> 作者本机还有一批端到端自查脚本（用 Bun + Chrome 驱动真实浏览器做回归），含本机绝对路径，**未包含在本仓库**。
-
 ---
 
 ## 部署到公网
@@ -144,7 +141,7 @@ bun dev/_pwa_test.js            # PWA 可安装性（Chrome 官方判定）
 ## 安全说明
 
 - **本仓库不含任何密钥**：`*.pwd`、`keystore.p12`、`dsapi.txt`、`data/`、`logs/`、`backup/` 全部 gitignore
-- 邀请码 / 证书口令 / TURN 口令都是 **fail-closed**：没配就不开放对应功能，不会退化成"人人可用"
+- 邀请码 / 证书口令 / TURN 口令都是 **fail-closed**：没配就不开放对应功能
 - 上传、文件列表、下载、预览、偏好、番茄钟接口都校验登录 token；上传有存储配额
 - 建议：公网部署时把 `chat.allowed-origins` 设成你的域名，并定期轮换邀请码与 AI 账号密码
 
