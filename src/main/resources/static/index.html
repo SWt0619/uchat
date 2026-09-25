@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1976d2">
+<!-- PWA（2026-09-25 v2.9.16）：装到桌面 / 独立窗口打开 -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Uchat</title>
+<link rel="stylesheet" href="css/light.css?v=202609251407">
+<link rel="stylesheet" href="css/dark.css?v=202609251407">
+<script src="vendor/marked/marked.min.js?v=202609251407"></script>
+<script src="vendor/highlight/highlight.min.js?v=202609251407"></script>
+<link rel="stylesheet" href="vendor/highlight/styles/github-dark.min.css?v=202609251407">
+<link rel="stylesheet" href="vendor/katex/katex.min.css?v=202609251407">
+<script src="vendor/katex/katex.min.js?v=202609251407"></script>
+<script src="vendor/katex/contrib/auto-render.min.js?v=202609251407"></script>
+<style>
+/* ===== Global Reset & Layout ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    transition: background 0.3s, color 0.3s;
+}
+a, a:link, a:visited { color: var(--text-link); text-decoration: underline; }
+a:hover { color: var(--accent-hover); }
+
+/* ===== Login Overlay ===== */
+#login-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: var(--bg-primary);
+    display: flex; align-items: center; justify-content: center;
+}
+#login-overlay.hidden { display: none; }
+.login-card {
+    background: var(--bg-secondary);
+    padding: 40px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 400px;
+    text-align: center;
+}
+.login-card h1 { font-size: 28px; margin-bottom: 8px; color: var(--accent); }
+.login-card .subtitle { color: var(--text-secondary); margin-bottom: 24px; font-size: 13px; }
+.login-card .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); }
+.login-card .tab {
+    flex: 1; padding: 10px; cursor: pointer; border: none; background: none;
+    color: var(--text-secondary); font-size: 15px; transition: 0.2s;
+}
+.login-card .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -2px; }
+.form-group { margin-bottom: 16px; text-align: left; }
+.form-group label { display: block; margin-bottom: 4px; font-size: 13px; color: var(--text-secondary); }
+.form-group input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border-input);
+    border-radius: var(--radius-sm); font-size: 14px;
+    background: var(--bg-input); color: var(--text-primary); outline: none; transition: 0.2s;
+}
+.form-group input:focus { border-color: var(--accent); }
+.btn {
+    padding: 10px 20px; border: none; border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 14px; transition: 0.2s;
+}
+.btn-primary { background: var(--btn-primary-bg); color: #fff; width: 100%; }
+.btn-primary:hover { background: var(--btn-primary-hover); }
+.error-msg { color: var(--error); font-size: 12px; margin-top: 8px; min-height: 20px; }
+
+/* ===== Main Layout ===== */
+#main-app { display: flex; flex-direction: column; height: 100%; }
+#main-app.hidden { display: none; }
+
+/* Toolbar — above input area (WeChat style) */
+/* ===== 内联音频播放器（v2.9.16）===== */
+/* 全部用主题变量（light.css / dark.css 里都有），暗色模式自动适配 */
+.msg-audio-card { margin-top: 4px; padding: 6px 8px; border: 1px solid var(--border-light);
+    border-radius: 8px; background: var(--bg-secondary); max-width: min(100%, 420px); }
+.msg-audio-card .au-row { display: flex; align-items: center; gap: 6px; }
+.msg-audio-card .au-row2 { margin-top: 4px; }
+.msg-audio-card .au-btn { flex: none; width: 26px; height: 24px; line-height: 1; cursor: pointer;
+    border: 1px solid var(--border-color); background: var(--btn-bg); color: var(--text-primary);
+    border-radius: 5px; font-size: 12px; }
+.msg-audio-card .au-btn:hover { background: var(--btn-bg-hover); }
+.msg-audio-card .au-rate { width: auto; padding: 0 6px; }
+.msg-audio-card .au-seek { flex: 1; min-width: 90px; accent-color: var(--accent); height: 18px; }
+.msg-audio-card .au-time { flex: none; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.msg-audio-card .au-volwrap { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--text-muted); }
+.msg-audio-card .au-vol { width: 56px; accent-color: var(--accent); height: 16px; }
+.msg-audio-card .au-dl { font-size: 11px; color: var(--text-link); text-decoration: none; }
+/* 歌名独占一行（原来是和控件同行的 flex:1 + 省略号 ⇒ 长标题显示不全） */
+.msg-audio-card .au-cap { display: block; width: 100%; margin-top: 5px; font-size: 11px;
+    color: var(--text-secondary); text-align: left; white-space: normal; overflow-wrap: anywhere;
+    word-break: break-word; line-height: 1.35; }
+.msg-dl { font-size: 12px; color: var(--accent); text-decoration: none; margin-left: 6px; }
+.msg-media-unsupported { margin-top: 4px; padding: 8px; border: 1px dashed var(--border);
+    border-radius: 8px; max-width: 340px; background: var(--panel-bg); }
+
+/* toolbar 按钮被用户隐藏（设置里取消勾选）：用 !important，避免别处的 inline display 把它放出来 */
+.tb-hidden { display: none !important; }
+
+#toolbar {
+    display: flex; align-items: center; gap: 2px;
+    padding: 4px 12px; background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    user-select: none; flex-shrink: 0;
+}
+.tool-btn {
+    width: 32px; height: 32px; border: none; background: transparent;
+    border-radius: var(--radius-sm); cursor: pointer; font-size: 16px;
+    color: var(--text-secondary); transition: 0.15s;
+    display: flex; align-items: center; justify-content: center;
+}
+.tool-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tool-btn.active { color: var(--accent); background: var(--accent-light); }
+.tool-btn.recording { color: var(--error); animation: pulse 1s infinite; }
+.tool-btn.disabled { opacity: 0.3; pointer-events: none; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.typing-dots { font-size: 13px; color: var(--accent); animation: pulse 0.8s infinite; }
+.tool-spacer { flex: 1; }
+.status-preset { display:inline-block;padding:4px 10px;background:var(--bg-secondary);border-radius:12px;cursor:pointer;font-size:12px;color:var(--text-primary);white-space:nowrap;transition:background .2s }
+.status-preset:hover { background: var(--accent); color: #fff; }
+.user-status-badge { font-size:11px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:10px;margin-left:2px;vertical-align:middle;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block }
+.pomo-bar { flex:1;min-width:32px;background:var(--accent);border-radius:4px 4px 0 0;transition:height .3s;position:relative;cursor:default }
+.pomo-bar:hover { opacity:0.8 }
+.pomo-bar-label { position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text-primary);white-space:nowrap }
+.tm-cell { width:14px;height:14px;border-radius:2px;background:rgba(255,255,255,0.1);transition:background .3s }
+.tm-cell.work { background:#e91e63 }
+.tm-cell.break { background:#4caf50 }
+.tm-cell.current { box-shadow:0 0 6px var(--accent);animation:pulse 1.6s infinite }
+@keyframes goldShimmer { 0%,100% { background:#ffd700;box-shadow:0 0 4px #ffd700 } 25% { background:#ffec80;box-shadow:0 0 10px #ffec80 } 50% { background:#ffb300;box-shadow:0 0 16px #ffb300 } 75% { background:#ffe082;box-shadow:0 0 8px #ffe082 } }
+@keyframes bppShimmer { 0% { background:#448aff;box-shadow:0 0 6px #448aff } 33% { background:#7c4dff;box-shadow:0 0 12px #7c4dff } 66% { background:#e040fb;box-shadow:0 0 12px #e040fb } 100% { background:#448aff;box-shadow:0 0 6px #448aff } }
+.tm-complete .tm-cell { animation:bppShimmer 1.5s ease-in-out infinite;border-radius:2px }
+.tm-complete.tm-complete-gold .tm-cell { animation-name:goldShimmer }
+.tm-complete .tm-cell:nth-child(odd) { animation-delay:0.1s }
+.tm-complete .tm-cell:nth-child(3n) { animation-delay:0.2s }
+.tm-complete .tm-cell:nth-child(5n+2) { animation-delay:0.35s }
+@keyframes firework { 0% { box-shadow:0 0 0 0 #448aff,0 0 0 0 #e040fb;transform:translateX(-50%) scale(1) } 50% { box-shadow:0 0 20px 8px #7c4dff,0 0 40px 16px #e040fb;transform:translateX(-50%) scale(1.5) } 100% { box-shadow:0 0 0 0 #448aff,0 0 0 0 #e040fb;transform:translateX(-50%) scale(1) } }
+@keyframes fireworkGold { 0% { box-shadow:0 0 0 0 #ffd700,0 0 0 0 #ff6d00;transform:translateX(-50%) scale(1) } 50% { box-shadow:0 0 20px 8px #ffd700,0 0 40px 16px #ff6d00;transform:translateX(-50%) scale(1.5) } 100% { box-shadow:0 0 0 0 #ffd700,0 0 0 0 #ff6d00;transform:translateX(-50%) scale(1) } }
+.tm-firework { animation:firework 1s ease-out infinite;background:#7c4dff !important;border-color:#7c4dff !important }
+.tm-firework.tm-firework-gold { animation-name:fireworkGold;background:#ffd700 !important;border-color:#ffd700 !important }
+@keyframes burstParticle { 0% { opacity:1;transform:translate(-50%,-50%) scale(0) } 100% { opacity:0;transform:translate(-50%,-50%) scale(3) } }
+.tm-firework::before,.tm-firework::after { content:'';position:absolute;border-radius:50%;pointer-events:none }
+.tm-firework::before { width:40px;height:40px;left:50%;top:50%;background:radial-gradient(circle,#7c4dff,transparent);animation:burstParticle 0.8s ease-out infinite }
+.tm-firework::after { width:60px;height:60px;left:50%;top:50%;background:radial-gradient(circle,#e040fb,transparent);animation:burstParticle 0.8s ease-out 0.2s infinite }
+.tm-firework.tm-firework-gold::before { background:radial-gradient(circle,#ffd700,transparent) }
+.tm-firework.tm-firework-gold::after { background:radial-gradient(circle,#ff6d00,transparent) }
+
+/* Screen share bar */
+#screen-bar {
+    display: none; align-items: center; gap: 10px;
+    padding: 6px 16px; background: #4caf50; color: #fff;
+    font-size: 13px; flex-shrink: 0;
+}
+#screen-bar.visible { display: flex; }
+#screen-bar select {
+    padding: 4px 8px; border-radius: var(--radius-sm); border: none;
+    font-size: 12px; background: rgba(255,255,255,0.9);
+}
+
+/* ===== Content Area ===== */
+#content-area {
+    display: flex; flex: 1; overflow: hidden;
+}
+
+/* Chat panel */
+#chat-panel {
+    flex: 1; display: flex; flex-direction: column; min-width: 0;
+}
+#message-area {
+    flex: 1; overflow-y: auto; padding: 16px;
+    background: var(--bg-primary);
+}
+.message {
+    margin-bottom: 8px; padding: 6px 10px; border-radius: var(--radius-sm);
+    line-height: 1.5; word-break: break-word;
+    position: relative;
+}
+.message:hover { background: rgba(128,128,128,0.12); }
+.message.system { color: var(--text-muted); font-size: 12px; text-align: center; }
+.message.private { background: var(--bg-msg-private); }
+.message.mentioned { background: rgba(255,193,7,0.18); border-left: 3px solid #ffc107; padding-left: 7px; }
+.message.search-highlight { background: rgba(0,180,255,0.25); border-left: 3px solid #00b4ff; padding-left: 7px; }
+.message.search-match { background: rgba(0,180,255,0.08); border-left: 2px solid rgba(0,180,255,0.3); padding-left: 8px; }
+.msg-header { display: flex; align-items: baseline; margin-bottom: 2px; }
+.msg-body { padding-left: 4px; }
+.msg-nick { font-weight: 600; margin-right: 6px; }
+.msg-nick.self { color: var(--nick-self); }
+.msg-nick.other { color: var(--nick-other); }
+.msg-time { font-size: 11px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
+.msg-private-tag { color: var(--private-tag); font-weight: 600; font-size: 11px; }
+.msg-quote { border-left: 3px solid var(--quote-bar); padding: 2px 8px; margin-bottom: 4px; font-size: 12px; color: var(--text-secondary); background: var(--accent-light); border-radius: 2px; }
+.msg-recalled { color: var(--text-muted); font-style: italic; font-size: 12px; }
+.msg-img { max-width: 300px; max-height: 200px; border-radius: var(--radius-sm); cursor: pointer; }
+.msg-file-card { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-tertiary); border-radius: var(--radius-sm); cursor: pointer; }
+.msg-file-card:hover { background: var(--bg-hover); }
+.stale-file { opacity: 0.5; }
+.stale-file::after { content: ' [文件已失效]'; font-size: 11px; color: var(--error); }
+
+/* Context menu */
+#context-menu {
+    display: none; position: fixed;
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+    z-index: 500; min-width: 140px; padding: 4px 0;
+}
+#context-menu.visible { display: block; }
+.context-item {
+    padding: 8px 16px; cursor: pointer; font-size: 13px;
+    color: var(--text-primary);
+}
+.context-item:hover { background: var(--bg-hover); }
+
+/* User list */
+#user-panel {
+    width: 280px; background: var(--bg-userlist);
+    border-left: 1px solid var(--border-color);
+    display: flex; flex-direction: column; flex-shrink: 0;
+}
+#user-panel h3 {
+    padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary); display: flex; align-items: center; gap: 6px;
+}
+#user-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+.user-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; cursor: pointer; font-size: 13px;
+    color: var(--text-primary);
+}
+.user-item:hover { background: var(--bg-hover); }
+.user-item .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+.user-item .call-icon { font-size: 12px; }
+
+/* 手机端用户行里的「@ / 私聊」快捷按钮：**默认隐藏**（桌面端仍走 单击/右键 菜单）。
+   ⚠️ 这条必须留在基础 CSS：若只写进手机媒体查询，桌面端没有任何规则，而 .user-item 是 flex 容器
+   会把 span 块化 ⇒ 桌面上也会冒出这两个按钮（2026-09-24 桌面回归 D1 抓到）。 */
+.user-row-actions { display: none; margin-left: auto; gap: 6px; align-items: center; flex-shrink: 0; }
+
+/* Input area */
+#input-area {
+    background: var(--bg-secondary); border-top: 1px solid var(--border-color);
+    padding: 10px 16px; display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+}
+#input-area textarea {
+    flex: 1; padding: 10px 12px; font-size: 14px; font-family: var(--font-sans);
+    border: 1px solid var(--border-input); border-radius: var(--radius-md);
+    resize: none; outline: none; min-height: 42px; max-height: 120px;
+    background: var(--bg-input); color: var(--text-primary);
+}
+#input-area textarea:focus { border-color: var(--accent); }
+#send-btn {
+    padding: 10px 24px; background: var(--btn-primary-bg); color: #fff;
+    border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 14px; white-space: nowrap;
+}
+#send-btn:hover { background: var(--btn-primary-hover); }
+#send-btn.reconnect { background: var(--btn-danger-bg); }
+#send-btn.reconnect:hover { background: var(--btn-danger-hover); }
+
+/* ===== Emoji Picker — fixed positioned near toolbar ===== */
+#emoji-picker {
+    display: none; position: fixed;
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+    padding: 8px; z-index: 300; width: 290px;
+}
+#emoji-picker.visible { display: block; }
+.emoji-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+.emoji-btn { width: 26px; height: 28px; border: none; background: transparent; cursor: pointer; font-size: 18px; border-radius: 2px; }
+.emoji-btn:hover { background: var(--bg-hover); }
+
+/* ===== Video Call — Floating Panel ===== */
+#video-overlay {
+    display: none; position: fixed; bottom: 120px; right: 16px; z-index: 800;
+    background: #1a1a2e; flex-direction: column;
+    border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+    width: 380px; min-width: 320px; overflow: hidden;
+}
+#video-overlay.visible { display: flex; }
+#video-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; color: #fff; font-size: 12px;
+    background: rgba(0,0,0,0.3); cursor: move;
+}
+#video-grid { display: flex; gap: 4px; padding: 4px; flex-wrap: wrap; justify-content: center; align-items: center; min-height: 160px; max-height: 320px; overflow-y: auto; }
+.video-tile {
+    position: relative; background: #333; border-radius: var(--radius-sm);
+    overflow: hidden; flex: 1 1 45%; min-width: 120px; aspect-ratio: 4/3;
+}
+.video-tile video { width: 100%; height: 100%; object-fit: cover; }
+.video-tile .tile-label {
+    position: absolute; bottom: 4px; left: 6px; color: #fff;
+    font-size: 11px; background: rgba(0,0,0,0.5); padding: 1px 6px; border-radius: 3px;
+}
+.video-tile.local video { transform: scaleX(-1); }
+#video-controls {
+    display: flex; justify-content: center; align-items: center; gap: 4px; padding: 6px 8px;
+}
+.video-ctrl-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: none;
+    font-size: 16px; cursor: pointer; transition: 0.2s;
+    background: rgba(255,255,255,0.15); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+}
+.video-ctrl-btn.small { width: 28px; height: 28px; font-size: 13px; }
+.video-ctrl-btn:hover { background: rgba(255,255,255,0.3); }
+.video-ctrl-btn.off { background: var(--btn-danger-bg); }
+#btn-nr.on { background: #4caf50; }
+#video-hangup { width: 30px; height: 30px; font-size: 14px; }
+#video-hangup:hover { background: var(--btn-danger-hover); }
+
+/* ① 手机端可拖动：拖动把手禁用浏览器手势，否则触摸会被当作滚动 */
+#video-header, #screen-viewer-bar, #private-chat-header { touch-action: none; cursor: move; }
+
+/* ===== Screen Share Viewer — Floating ===== */
+#screen-viewer {
+    display: none; position: fixed; bottom: 120px; right: 360px; z-index: 700;
+    background: #1a1a2e; border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); width: 400px; height: 280px; overflow: hidden;
+}
+#screen-viewer.visible { display: block; }
+#screen-viewer.fullscreen {
+    inset: 0; bottom: 0; right: 0; width: auto; border-radius: 0; z-index: 850;
+}
+#screen-viewer video {
+    width: 100%; display: block; height: calc(100% - 28px); object-fit: contain; background: #000;
+}
+#screen-viewer.fullscreen {
+    inset: 0 !important; width: 100vw !important; height: 100vh !important;
+    border-radius: 0; background: #000; z-index: 900;
+}
+#screen-viewer.fullscreen video {
+    max-height: none; width: 100%; height: calc(100vh - 36px); object-fit: contain;
+}
+
+/* ===== Private Chat Modal ===== */
+#private-modal {
+    display: none; position: fixed; bottom: 20px; right: 20px;
+    width: 360px; height: 420px; z-index: 600;
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+    flex-direction: column;
+}
+#private-modal.visible { display: flex; }
+#private-modal .pm-header {
+    padding: 10px 14px; background: var(--accent); color: #fff;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 14px; font-weight: 600;
+}
+#private-modal .pm-header .pm-close { background: none; border: none; color: #fff; cursor: pointer; font-size: 18px; }
+#private-modal .pm-messages { flex: 1; overflow-y: auto; padding: 10px; }
+#private-modal .pm-input { display: flex; padding: 8px; border-top: 1px solid var(--border-color); }
+#private-modal .pm-input input { flex: 1; padding: 8px; border: 1px solid var(--border-input); border-radius: var(--radius-sm); outline: none; background: var(--bg-input); color: var(--text-primary); }
+#private-modal .pm-input button { margin-left: 6px; padding: 8px 14px; background: var(--btn-primary-bg); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; }
+/* P0-④ 离线私聊：补投消息的「离线」标记 + 离线提示行 + 联系人未读角标 */
+#private-modal .pm-messages .msg-offline-tag {
+    font-size: 10px; color: var(--text-muted); border: 1px solid var(--border-color);
+    background: var(--bg-code); border-radius: 3px; padding: 0 3px; margin-right: 2px;
+}
+#private-modal .pm-messages .pm-hint {
+    font-size: 12px; color: var(--text-muted); text-align: center;
+    margin: 4px 0 8px; line-height: 1.5;
+}
+.user-item .pm-unread-badge {
+    display: inline-block; min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
+    margin-left: 4px; font-size: 10px; font-weight: 700; color: #fff; text-align: center;
+    background: #e5484d; border-radius: 8px; vertical-align: middle;
+}
+
+/* ===== Settings Modal ===== */
+#settings-modal {
+    display: none; position: fixed; inset: 0; z-index: 900;
+    background: var(--bg-overlay); align-items: center; justify-content: center;
+}
+#settings-modal.visible { display: flex; }
+.settings-card {
+    background: var(--bg-secondary); padding: 30px; border-radius: var(--radius-lg);
+    width: 420px; box-shadow: var(--shadow-lg);
+}
+.settings-card h2 { margin-bottom: 20px; font-size: 20px; }
+.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+.setting-row select { padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-input); background: var(--bg-input); color: var(--text-primary); }
+.settings-card .btn-row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+/* ===== Toast ===== */
+#toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    padding: 10px 24px; border-radius: var(--radius-sm);
+    color: #fff; font-size: 13px; z-index: 2000; opacity: 0;
+    transition: opacity 0.3s; pointer-events: none;
+}
+#toast.show { opacity: 1; }
+#toast.info { background: var(--info); }
+#toast.success { background: var(--success); }
+#toast.error { background: var(--error); }
+
+/* ===== Markdown Styles ===== */
+.message .md-code { font-family: var(--font-mono); background: var(--bg-code); padding: 1px 4px; border-radius: 2px; font-size: 13px; }
+.message .md-code-block { display: block; font-family: var(--font-mono); background: var(--bg-code); padding: 8px 12px; border-radius: var(--radius-sm); margin: 4px 0; overflow-x: auto; font-size: 13px; line-height: 1.4; white-space: pre-wrap; }
+.message .md-bold { font-weight: 700; }
+.message .md-italic { font-style: italic; }
+.message .md-list-item { padding-left: 8px; }
+.message .md-quote { border-left: 3px solid var(--text-muted); padding-left: 8px; color: var(--text-secondary); margin: 4px 0; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Recording animation in input placeholder */
+#input-area textarea.recording-placeholder::placeholder { color: var(--error); }
+
+/* Voice test NR buttons */
+.voice-nr-btn { border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input); color:var(--text-primary); cursor:pointer; transition:0.15s; }
+.voice-nr-btn:hover { background:var(--bg-hover); }
+.voice-nr-btn.nr-active { background:var(--accent); color:#fff; border-color:var(--accent); }
+/* Ambient sound active state */
+.ambient-btn.active { background:rgba(126,192,246,0.25); border-color:#7ec0f6; color:#7ec0f6; }
+
+/* ===== Animations ===== */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 消息入场 */
+.message { animation: fadeInUp 0.2s ease-out; }
+.message.system { animation: fadeIn 0.15s ease-out; }
+
+/* 弹窗入场 */
+#settings-modal.visible .settings-card { animation: scaleIn 0.2s ease-out; }
+#search-modal[style*="flex"] > div { animation: scaleIn 0.2s ease-out; }
+#private-modal.visible { animation: fadeInUp 0.2s ease-out; }
+#files-modal[style*="flex"] > div:first-child { animation: scaleIn 0.2s ease-out; }
+#img-lightbox[style*="flex"] { animation: fadeIn 0.25s ease-out; }
+
+/* Toast 通知滑入 */
+#toast.show { animation: slideDown 0.3s ease-out; }
+
+/* 右键菜单 */
+#context-menu.visible { animation: scaleIn 0.12s ease-out; }
+
+/* 表情选择器 */
+#emoji-picker.visible { animation: fadeIn 0.15s ease-out; }
+
+/* 用户列表项 */
+.user-item { animation: fadeIn 0.25s ease-out; }
+
+/* 视频面板 */
+#video-overlay.visible { animation: fadeInUp 0.25s ease-out; }
+
+/* 听歌房面板 */
+#music-room[style*="flex"] { animation: fadeInUp 0.2s ease-out; }
+
+/* 按钮过渡统一 */
+.tool-btn, .btn, .md-btn, .context-item, .emoji-btn, .ambient-btn {
+    transition: background 0.15s, color 0.15s, transform 0.12s, border-color 0.15s, opacity 0.15s;
+}
+.tool-btn:active, .btn:active, .md-btn:active { transform: scale(0.94); }
+.context-item:hover { transform: translateX(3px); }
+
+/* 输入框过渡 */
+textarea, input[type="text"], input[type="password"], select {
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+textarea:focus, input[type="text"]:focus, input[type="password"]:focus {
+    box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+/* 视频通话按钮 */
+.video-ctrl-btn { transition: background 0.2s, transform 0.12s; }
+.video-ctrl-btn:active { transform: scale(0.9); }
+
+/* 历史搜索高亮过渡 */
+.message.search-highlight, .message.search-match { transition: background 0.2s, border-color 0.2s; }
+
+/* 链接悬停 */
+a { transition: color 0.15s; }
+/* Markdown toolbar */
+.md-btn { width:28px;height:26px;border:1px solid transparent;border-radius:3px;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:0.15s }
+.md-btn:hover { background:var(--bg-hover);color:var(--text-primary);border-color:var(--border-color) }
+.md-btn.active { background:var(--accent);color:#fff;border-color:var(--accent) }
+.sym-btn { width:32px;height:28px;border:1px solid var(--border-color);border-radius:3px;background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:0.15s;font-family:inherit }
+.sym-btn:hover { background:var(--accent);color:#fff;border-color:var(--accent) }
+/* KaTeX 暗色适配 */
+[data-theme="dark"] .katex { color: #d8dce6; }
+[data-theme="dark"] .katex .mord { color: #d8dce6; }
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.katex-display > .katex { white-space: normal; }
+
+/* ==========================================================
+   移动端适配（2026-09-23）
+   桌面端（>768px）完全不受影响：所有规则都在下面的媒体查询里。
+   侧栏改右侧抽屉，由 #user-panel-toggle 这个 checkbox 纯 CSS 控制，
+   不需要任何 JS（app.js / chat.js 均未改动）。
+   ========================================================== */
+#user-panel-toggle { display: none; }
+#drawer-backdrop { display: none; }
+#user-panel-toggle-label { display: none; }
+
+/* ===== @ 补全面板（输入 @ 时列出在线用户；仅在线，双端通用） ===== */
+#mention-picker {
+    position: fixed; display: none; z-index: 260;
+    min-width: 170px; max-width: min(320px, 72vw); max-height: 44vh; overflow-y: auto;
+    padding: 4px 0; background: var(--bg-primary);
+    border: 1px solid var(--border-color); border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+}
+#mention-picker.visible { display: block; }
+#mention-picker .mp-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px; font-size: 14px; cursor: pointer; white-space: nowrap;
+    color: var(--text-primary);
+}
+#mention-picker .mp-item.active, #mention-picker .mp-item:hover { background: var(--bg-hover); }
+#mention-picker .mp-item .mp-at { color: var(--text-muted); }
+#mention-picker .mp-empty { padding: 8px 12px; font-size: 12px; color: var(--text-muted); }
+
+@media (max-width: 768px) {
+    /* —— 侧栏：右侧抽屉 —— */
+    #content-area { position: relative; }
+    #user-panel {
+        position: fixed; top: 0; right: 0; bottom: 0;
+        width: min(78vw, 300px);
+        transform: translateX(102%);
+        transition: transform 0.22s ease;
+        z-index: 620;
+        box-shadow: -6px 0 18px rgba(0,0,0,0.25);
+    }
+    #user-panel-toggle:checked ~ #user-panel { transform: translateX(0); }
+    #user-panel-toggle:checked ~ #drawer-backdrop { display: block; }
+    #drawer-backdrop {
+        position: fixed; inset: 0; z-index: 610;
+        background: rgba(0,0,0,0.38);
+    }
+    /* 抽屉开关按钮（仅窄屏显示，放在工具栏里） */
+    #user-panel-toggle-label {
+        display: flex; align-items: center; justify-content: center;
+        width: 36px; height: 36px; font-size: 18px;
+        border: none; background: transparent; cursor: pointer;
+        color: var(--text-secondary); border-radius: var(--radius-sm);
+        flex-shrink: 0;
+    }
+    #user-panel-toggle-label:active { background: var(--bg-hover); }
+
+    /* —— 工具栏：允许换行 + 触控尺寸 —— */
+    #toolbar {
+        flex-wrap: wrap; row-gap: 2px; padding: 4px 8px;
+    }
+    #toolbar .tool-btn { width: 36px; height: 36px; font-size: 18px; }
+    #toolbar .tool-spacer { display: none; }
+    .status-preset {
+        max-width: 46vw; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* —— 移动端只保留基本功能按钮（用户 2026-09-23 要求）——
+       保留：表情 / 骰子 / 语音通话 / 视频通话 / 设置 / 日夜切换 / 清屏
+       做法：先把所有 .tool-btn 隐藏，再按 id 逐个放出；以后新增按钮默认不会挤到手机工具栏。
+       （👥 在线列表开关另算，它是移动端打开侧栏抽屉的唯一入口，必须保留） */
+    #toolbar .tool-btn { display: none; }
+    #toolbar #btn-emoji,
+    #toolbar #btn-dice,
+    #toolbar #btn-voice-call,
+    #toolbar #btn-video-call,
+    #toolbar #btn-settings,
+    #toolbar #btn-theme,
+    #toolbar #btn-clear { display: flex; }
+    #toolbar .status-preset { display: none; }
+    /* ① 房间里有共享时露出 🖥️：手机端关掉观看面板后，靠它重新唤起（无共享时仍隐藏，避免误发起） */
+    #toolbar #btn-screen-share.off { display: flex; }
+
+    /* ② 手机端隐藏 LaTeX 公式相关按键（用户 2026-09-23 要求）：
+       𝑓𝑥 行内公式 / ∑∫ 块级公式 / Ω 数学符号面板按钮，以及符号面板本体 */
+    #md-toolbar [data-md="math"],
+    #md-toolbar [data-md="mathblock"],
+    #md-toolbar #btn-symbol-panel,
+    #symbol-panel { display: none !important; }
+
+    /* —— Markdown 工具条：允许换行 + 触控尺寸 —— */
+    #md-toolbar { flex-wrap: wrap; padding: 2px 8px; row-gap: 1px; }
+    #md-toolbar #md-toolbar-btns { flex-wrap: wrap; }
+    #md-toolbar .md-btn { width: 32px; height: 32px; font-size: 15px; }
+
+    /* —— 输入区 —— */
+    #input-area { padding: 8px 10px; gap: 6px; }
+    #input-area textarea { min-height: 40px; padding: 9px 10px; }
+    #send-btn { padding: 10px 16px; }
+
+    /* —— 消息区与内容 —— */
+    #message-area { padding-left: 10px; padding-right: 10px; }
+    .msg-img { max-width: 100%; max-height: 55vh; }
+    img, video, canvas { max-width: 100%; }
+    pre { overflow-x: auto; }
+    .msg-content, .msg-body { overflow-wrap: anywhere; word-break: break-word; }
+
+    /* —— 登录卡片 —— */
+    .login-card { width: min(400px, calc(100vw - 24px)); padding: 24px 18px; }
+
+    /* —— 表情面板：贴满宽度 —— */
+    #emoji-picker {
+        left: 6px !important; right: 6px !important;
+        width: auto !important; max-height: 46vh; overflow-y: auto;
+    }
+    .emoji-grid { grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); }
+
+    /* —— 接收屏幕共享的浮动面板：手机上铺满可用宽度 ——
+       原样式 right:360px + width:400px 在 390px 宽的手机上左边缘算出来是 -370px，
+       等于整个面板跑到屏外（手机看不到共享画面）。这里改为左右贴边 + 限高。 */
+    #screen-viewer {
+        left: 6px !important; right: 6px !important; bottom: 84px !important;
+        width: auto !important; height: 40vh !important;
+    }
+    #screen-viewer.fullscreen { left: 0 !important; right: 0 !important; height: 100vh !important; }
+
+    /* ③ 通话面板在手机上也要贴边显示（原固定尺寸 + right:360px 会整块跑出屏外，
+       导致麦克风按钮 #btn-mic-toggle 根本看不到 —— 用户 2026-09-23 反馈"找不到麦克风按钮"） */
+    #video-overlay {
+        left: 6px !important; right: 6px !important; bottom: 84px !important;
+        width: auto !important; max-height: 52vh;
+    }
+    #video-overlay .video-ctrl-btn { min-width: 34px; min-height: 30px; font-size: 16px; }
+    #mic-vol { width: 52px !important; }
+    #screen-viewer video { height: calc(100% - 28px); }
+
+    /* —— 各类固定面板/弹窗：别超出屏幕 —— */
+    [id$="-modal"] { max-width: 96vw !important; }
+    #video-overlay, #ambient-panel { max-width: 96vw; }
+    #symbol-panel { max-height: 34vh; overflow-y: auto; }
+
+    /* ④ 设置页：手机上没意义的项直接隐藏（HTML 里标了 data-mobile="hide"）——
+          屏幕共享（手机浏览器没有 getDisplayMedia）、发送习惯（手机是点「发送」按钮）、
+          字体/麦克风/摄像头设备（手机上基本都是唯一设备或系统接管） */
+    #settings-modal [data-mobile="hide"] { display: none !important; }
+
+    /* ⑤ 设置卡：手机上占满可用高度；「关闭」吸底 —— 原来卡片比屏幕高，关闭按钮要滚动才够得着 */
+    #settings-modal .settings-card { max-height: calc(100vh - 20px) !important; display: flex; flex-direction: column; }
+    #settings-modal .btn-row { position: sticky; bottom: 0; background: var(--bg-secondary); padding: 10px 0 4px; }
+    #settings-modal .setting-row { padding: 9px 0; }
+    #settings-modal .setting-row > span:first-child { font-size: 14px; }
+
+    /* ⑥ 上下文菜单必须浮在抽屉之上。
+          原 z-index 500 < 抽屉 620 / 遮罩 610 ⇒ 手机点用户后菜单被抽屉盖住，
+          「@ 提及 / 私聊」根本点不到（2026-09-24 实测：菜单中心最上层元素是 user-list） */
+    #context-menu { z-index: 700 !important; min-width: 162px; }
+    #context-menu .context-item { padding: 11px 14px; font-size: 15px; }
+    #context-menu .context-item[data-action="reply"],
+    #context-menu .context-item[data-action="copy"],
+    #context-menu .context-item[data-action="recall"] { display: none !important; }
+
+    /* ⑦ 用户列表：加大触摸目标 + 行内「@ / 私聊」按钮（一击即达，不必先弹菜单） */
+    #user-panel { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+    #user-panel .user-item { min-height: 46px; padding: 6px 10px; font-size: 15px; }
+    #user-panel .user-item .user-row-actions { display: flex; }
+    .user-row-actions button {
+        min-width: 42px; min-height: 36px; padding: 0 8px; font-size: 16px; line-height: 1;
+        border: 1px solid var(--border-color); background: var(--bg-secondary);
+        color: var(--text-primary); border-radius: 9px; cursor: pointer;
+    }
+    .user-row-actions button:active { background: var(--bg-hover); }
+
+    /* ⑧ 私聊窗口：手机上整屏（原来是 fixed 360x420 右下角，键盘一弹输入框就被顶出屏外） */
+    #private-modal {
+        top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+        width: auto !important; height: auto !important; max-width: none !important; border-radius: 0 !important;
+    }
+    #private-modal .pm-header { border-radius: 0; padding: 12px 14px; font-size: 16px; }
+    #private-modal .pm-messages { padding: 12px; }
+    #private-modal .pm-input { padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+
+    /* ⑨ 输入控件字号 ≥16px：iOS 上小于 16px 聚焦会自动放大整页 */
+    #msg-input, #pm-input, #login-nick, #login-pwd, #login-invite, #pw-old, #pw-new { font-size: 16px !important; }
+
+    /* ⑩ @ 补全面板：手机上触摸目标加大、别盖住输入框 */
+    #mention-picker { max-height: 38vh; min-width: 190px; }
+    #mention-picker .mp-item { padding: 12px 14px; font-size: 16px; }
+}
+
+
+
+/* ==================== 用户列表：按角色分样式（管理员 / 机器人 / 普通） ==================== */
+.user-item.role-admin {
+    border-left: 3px solid #f0b400;
+    background: rgba(240, 180, 0, 0.10);
+    font-weight: 600;
+}
+.user-item.role-bot {
+    border-left: 3px dashed #2aa9c8;
+    background: rgba(42, 169, 200, 0.10);
+    font-style: italic;
+}
+[data-theme="dark"] .user-item.role-admin { background: rgba(240, 180, 0, 0.16); }
+[data-theme="dark"] .user-item.role-bot   { background: rgba(42, 169, 200, 0.16); }
+.role-tag {
+    font-size: 10px; line-height: 15px; margin-left: 4px; padding: 0 5px;
+    border-radius: 8px; white-space: nowrap; font-style: normal; font-weight: 500;
+}
+.role-tag-admin { background: #f0b400; color: #3a2b00; }
+.role-tag-bot   { background: #2aa9c8; color: #04262e; }
+</style>
+</head>
+<body data-theme="light">
+
+<!-- Login Overlay -->
+<div id="login-overlay">
+    <div class="login-card">
+        <h1>Uchat <span id="login-version-span" style="font-size:11px;font-weight:400;opacity:0.5">v2.9.16</span></h1>
+        <p class="subtitle">Develop · Test by HGDTeam</p>
+        <div class="tabs">
+            <button class="tab active" data-tab="login">登录</button>
+            <button class="tab" data-tab="register">注册</button>
+            <button class="tab" data-tab="changepwd">修改密码</button>
+        </div>
+        <div id="login-form">
+            <div class="form-group"><label>昵称</label><input type="text" id="login-nick" maxlength="20" placeholder="输入昵称"></div>
+            <div class="form-group" id="login-pwd-group"><label>密码</label><div style="display:flex;gap:4px"><input type="password" id="login-pwd" maxlength="18" placeholder="6-18位字母数字" style="flex:1"><button type="button" class="pwd-toggle" data-target="login-pwd" style="width:36px;border:1px solid var(--border-input);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--text-secondary);cursor:pointer;font-size:13px" title="显示密码">⊙</button></div></div>
+            <div class="form-group" id="invite-group" style="display:none"><label>注册码</label><input type="text" id="login-invite" maxlength="64" placeholder="请输入注册码（由部署者设置）" style="width:100%"></div>
+            <div class="form-group" id="new-pwd-group" style="display:none"><label>新密码</label><div style="display:flex;gap:4px"><input type="password" id="login-new-pwd" maxlength="18" placeholder="6-18位字母数字" style="flex:1"><button type="button" class="pwd-toggle" data-target="login-new-pwd" style="width:36px;border:1px solid var(--border-input);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--text-secondary);cursor:pointer;font-size:13px" title="显示密码">⊙</button></div></div>
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;font-size:12px;color:var(--text-secondary)">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="login-remember-nick" style="cursor:pointer"> 记住账号</label>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="login-remember-pwd" style="cursor:pointer"> 记住密码</label>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="login-auto-login" style="cursor:pointer"> 自动登录</label>
+            </div>
+            <button class="btn btn-primary" id="login-btn">登录</button>
+            <div class="error-msg" id="login-error"></div>
+            <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-muted);opacity:0.6">
+                © 2026 RJL0619 &nbsp;|&nbsp; Generated by DeepSeek Flash v4.1
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main App -->
+<div id="main-app" class="hidden">
+    <!-- Screen Share Bar -->
+    <div id="screen-bar">
+        <span>📺 正在共享屏幕</span>
+        <select id="screen-quality">
+            <option value="480p">480p</option>
+            <option value="720p">720p</option>
+            <option value="1080p">1080p</option>
+            <option value="2k">2K（2560×1440）</option>
+        </select>
+        <select id="screen-fps" style="padding:4px 8px;border-radius:var(--radius-sm);border:none;font-size:12px;background:rgba(255,255,255,0.9)">
+            <option value="24">24fps</option>
+            <option value="36">36fps</option>
+            <option value="48">48fps</option>
+            <option value="60">60fps</option>
+        </select>
+        <!-- 共享者：上行占用估算（人数 × 每路码率） -->
+        <span id="screen-share-stats" style="margin-left:auto;font-size:12px;color:#b8f3c0;white-space:nowrap"></span>
+        <button style="background:rgba(255,255,255,0.2);color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer" id="btn-screen-stop">停止共享</button>
+    </div>
+
+    <!-- Content Area -->
+    <div id="content-area">
+    <!-- 移动端：侧栏抽屉的纯 CSS 开关（桌面端隐藏） -->
+    <input type="checkbox" id="user-panel-toggle">
+    <label for="user-panel-toggle" id="drawer-backdrop" aria-label="关闭在线列表"></label>
+        <!-- Chat Panel -->
+        <div id="chat-panel">
+            <div id="message-area"></div>
+
+            <!-- Markdown Toolbar -->
+            <div id="md-toolbar" style="display:flex;align-items:center;gap:1px;padding:2px 16px;background:var(--bg-secondary);flex-shrink:0">
+                <span id="md-toolbar-btns" style="display:flex;align-items:center;gap:1px">
+                    <button class="md-btn" data-md="bold" title="加粗 Ctrl+B"><b>B</b></button>
+                    <button class="md-btn" data-md="italic" title="斜体 Ctrl+I"><i>I</i></button>
+                    <button class="md-btn" data-md="strike" title="删除线"><s>S</s></button>
+                    <button class="md-btn" data-md="code" title="行内代码">&lt;/&gt;</button>
+                    <button class="md-btn" data-md="math" title="行内公式">𝑓𝑥</button>
+                    <button class="md-btn" data-md="mathblock" title="块级公式">∑∫</button>
+                    <button class="md-btn" data-md="link" title="链接">🔗</button>
+                    <button id="btn-symbol-panel" class="md-btn" title="数学符号" style="font-size:14px;font-weight:600">Ω</button>
+                    <span style="width:1px;height:18px;background:var(--border-color);margin:0 4px"></span>
+                    <button class="md-btn" data-md="ul" title="无序列表">•</button>
+                    <button class="md-btn" data-md="ol" title="有序列表">1.</button>
+                    <button class="md-btn" data-md="quote" title="引用">&ldquo;</button>
+                </span>
+                <span style="flex:1"></span>
+                <button id="btn-md-toggle" class="md-btn" title="折叠/展开工具栏" style="font-size:10px">▼</button>
+            </div>
+
+            <!-- Math Symbol Panel -->
+            <div id="symbol-panel" style="display:none;flex-wrap:wrap;gap:2px;padding:6px 10px;background:var(--bg-secondary);border-top:1px solid var(--border-color);flex-shrink:0">
+            </div>
+
+            <!-- Toolbar -->
+            <div id="toolbar">
+                <label for="user-panel-toggle" id="user-panel-toggle-label" title="在线列表">👥</label>
+                <button class="tool-btn" id="btn-emoji" title="表情">😊</button>
+                <button class="tool-btn" id="btn-dice" title="骰子">🎲</button>
+                <button class="tool-btn" id="btn-file" title="发送文件">📎</button>
+                <input type="file" id="file-input" style="display:none" multiple>
+                <button class="tool-btn" id="btn-video-call" title="视频通话">📹</button>
+                <button class="tool-btn" id="btn-voice-call" title="语音通话">📞</button>
+                <button class="tool-btn" id="btn-music" title="一起听歌">🎵</button>
+                <button class="tool-btn" id="btn-screen-share" title="屏幕共享">🖥️</button>
+                <button class="tool-btn" id="btn-ambient" title="环境音效">🌧️</button>
+                <button class="tool-btn" id="btn-timer-popup" title="番茄钟">🍅</button>
+                <button class="tool-btn" id="btn-random-popup" title="随机决策">🎯</button>
+                <span class="tool-spacer"></span>
+                <button class="tool-btn" id="btn-search-toggle" title="搜索消息">🔍</button>
+                <button class="tool-btn" id="btn-theme" title="切换主题">🌓</button>
+                <button class="tool-btn" id="btn-clear" title="清屏">✕</button>
+                <button class="tool-btn" id="btn-files-view" title="聊天文件">📂</button>
+                <span style="position:relative;display:inline-block">
+                    <button class="tool-btn" id="btn-status" title="设置状态">📝</button>
+                    <div id="status-picker" style="display:none;position:absolute;bottom:110%;right:0;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:200;min-width:190px">
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px" id="status-presets">
+                            <span class="status-preset" data-status="学习中">📖 学习中</span>
+                            <span class="status-preset" data-status="工作中">💼 工作中</span>
+                            <span class="status-preset" data-status="忙碌">🏃 忙碌</span>
+                            <span class="status-preset" data-status="离开">🚶 离开</span>
+                            <span class="status-preset" data-status="听歌中">🎧 听歌中</span>
+                            <span class="status-preset" data-status="游戏中">🎮 游戏中</span>
+                        </div>
+                        <div style="display:flex;gap:4px">
+                            <input type="text" id="status-custom" placeholder="自定义状态..." maxlength="20" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg-primary);color:var(--text-primary)">
+                            <button id="status-clear" style="padding:4px 8px;font-size:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);cursor:pointer;white-space:nowrap">清除</button>
+                        </div>
+                    </div>
+                </span>
+                <button class="tool-btn" id="btn-settings" title="设置">⚙</button>
+            </div>
+
+            <!-- Emoji Picker -->
+            <div id="emoji-picker"><div class="emoji-grid" id="emoji-grid"></div></div>
+            <!-- @ 补全：输入 @ 时列出**在线**用户（双端通用；上下键/Enter 或点选） -->
+            <div id="mention-picker"></div>
+            <!-- Input Area -->
+            <div id="input-area">
+                <textarea id="msg-input" rows="1" placeholder="输入消息... (Enter 发送, Ctrl+Enter 换行)" title="Enter 发送，Ctrl+Enter 换行"></textarea>
+                <button id="send-btn">发送</button>
+            </div>
+        </div>
+        <!-- User Panel -->
+        <div id="user-panel">
+            <h3>👥 在线用户 <span id="user-count">0</span></h3>
+            <div id="user-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Music Room Floating Panel（v2.9.16：本地音频 / 网易云链接 + 真同步 + 版权兜底） -->
+<div id="music-room" style="display:none;position:fixed;bottom:120px;right:16px;z-index:800;background:#1a1a2e;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);width:480px;overflow:hidden;flex-direction:column">
+    <div id="music-room-header" style="display:flex;align-items:center;gap:8px;padding:10px 16px;color:#fff;font-size:14px;background:rgba(0,0,0,0.3);cursor:move">
+        <span>🎵 听歌房</span>
+        <span id="music-room-count" style="font-size:12px;opacity:0.7">0/4</span>
+        <span style="flex:1"></span>
+        <span id="music-room-sync-badge" style="font-size:11px;color:#7ec0f6" title="与服务端起点对齐的状态"></span>
+        <button id="btn-music-room-close" style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px;padding:0 4px;line-height:1;z-index:801">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.08)">
+        <span style="color:#999;font-size:11px">🔈</span>
+        <input type="range" id="music-room-vol" min="0" max="100" value="40" style="flex:1;accent-color:#e91e63">
+        <span id="music-room-vol-label" style="color:#aaa;font-size:11px;min-width:30px;text-align:right">40%</span>
+    </div>
+    <div id="music-room-users" style="padding:10px 16px;color:#ccc;font-size:13px;max-height:120px;overflow-y:auto;border-bottom:1px solid rgba(255,255,255,0.1)"></div>
+
+    <div id="music-room-track" style="padding:10px 16px;color:#ccc;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.1)">
+        <div id="music-room-track-name" style="color:#fff;font-size:13px;margin-bottom:6px;word-break:break-all">等待歌曲...</div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <span id="music-room-pos" style="font-size:11px;color:#aaa;min-width:36px">0:00</span>
+            <div style="flex:1;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden">
+                <div id="music-room-progress" style="height:100%;width:0%;background:#e91e63"></div>
+            </div>
+            <span id="music-room-dur" style="font-size:11px;color:#aaa;min-width:36px;text-align:right">--:--</span>
+            <button id="btn-music-room-resync" title="强制与服务端对齐" style="background:rgba(255,255,255,0.12);border:none;color:#ccc;border-radius:4px;cursor:pointer;font-size:11px;padding:2px 6px">⟳</button>
+        </div>
+        <button id="btn-music-room-start" style="display:none;width:100%;margin-top:8px;padding:8px;background:#e91e63;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">▶ 点这里开始同步播放</button>
+        <div id="music-room-warn" style="display:none;margin-top:8px;padding:6px 8px;background:rgba(255,152,0,0.15);border-left:3px solid #ff9800;color:#ffcc80;font-size:11px;line-height:1.6;border-radius:3px"></div>
+    </div>
+
+    <audio id="music-room-player" style="display:none;width:100%"></audio>
+
+    <div id="music-room-actions" style="padding:10px 16px;display:none">
+        <input type="text" id="music-room-input" placeholder="粘贴网易云歌曲链接（song?id=数字）" style="width:100%;padding:8px 10px;border:1px solid rgba(255,255,255,0.2);border-radius:4px;font-size:13px;background:rgba(255,255,255,0.1);color:#fff;outline:none;margin-bottom:8px">
+        <div style="display:flex;gap:4px">
+            <button id="btn-music-room-pick" style="flex:1;padding:8px;background:#e91e63;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">用链接选歌</button>
+            <button id="btn-music-room-file" style="flex:1;padding:8px;background:rgba(255,255,255,0.18);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">📁 本地音频</button>
+            <button id="btn-music-room-skip" style="padding:8px 14px;background:rgba(255,255,255,0.15);color:#ccc;border:none;border-radius:4px;cursor:pointer;font-size:13px">跳过</button>
+        </div>
+        <input type="file" id="music-room-file" accept="audio/*" style="display:none">
+        <div id="music-room-upload" style="display:none;margin-top:6px;font-size:11px;color:#7ec0f6"></div>
+        <div style="margin-top:6px;font-size:11px;color:#888;line-height:1.6">
+            ⚠ 网易云链接只能放**有外链权限**的曲目，遇到版权限制会放不出来 —— 届时会明确提示并自动跳过。<br>
+            📁 本地音频（mp3/ogg/wav/m4a/flac 等，≤30MB）会上传到服务器，房间内所有人用同一个音源同步播放。
+        </div>
+    </div>
+</div>
+
+<!-- Video Call Floating Panel -->
+<div id="video-overlay">
+    <div id="video-header">
+        <span id="video-header-title">📹 视频通话</span>
+        <button id="btn-video-max" title="最大化" style="margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;font-size:12px">全屏</button>
+        <button id="btn-video-min" title="最小化" style="background:none;border:none;color:#fff;cursor:pointer;font-size:12px">最小</button>
+    </div>
+    <div id="video-grid"></div>
+    <div id="voice-participants" style="display:none;flex-direction:column;gap:4px;padding:8px;max-height:240px;overflow-y:auto"></div>
+    <div id="video-controls">
+        <button class="video-ctrl-btn small" id="btn-mic-toggle" title="麦克风">🎙️</button>
+        <input type="range" id="mic-vol" min="0" max="200" value="100" title="Mic Gain" style="width:36px;accent-color:#4caf50">
+        <input type="range" id="spk-vol" min="0" max="100" value="100" title="Speaker" style="width:36px;accent-color:#fff">
+        <button class="video-ctrl-btn small" id="btn-cam" title="摄像头">📷</button>
+        <button class="video-ctrl-btn small" id="btn-nr" title="增强降噪（原生回声消除/降噪已默认开启）">○</button>
+        <button class="video-ctrl-btn small" id="video-hangup" title="挂断" style="background:var(--btn-danger-bg)">📞</button>
+    </div>
+</div>
+
+<!-- Call Room Selector -->
+<div id="call-room-selector" style="display:none;position:fixed;inset:0;z-index:950;background:var(--bg-overlay);align-items:center;justify-content:center">
+    <div style="background:var(--bg-secondary);padding:32px;border-radius:var(--radius-lg);width:380px;box-shadow:var(--shadow-lg);text-align:center">
+        <h3 id="call-room-title" style="margin-bottom:8px;color:var(--text-primary)">选择通话房间</h3>
+        <div id="call-room-1-card" style="padding:14px;border:2px solid var(--border-color);border-radius:8px;margin-bottom:10px;cursor:pointer;transition:0.15s">
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary)"><span id="call-room-1-name">语音房间 1</span> <span id="call-room-1-cur" style="display:none;font-size:11px;color:#fff;background:var(--accent);border-radius:8px;padding:1px 6px">当前</span></div>
+            <div id="call-room-1-sub" style="font-size:11px;color:var(--text-muted);margin-top:2px">语音 · 最多 12 人</div>
+            <div id="call-room-1-count" style="font-size:13px;color:var(--success);margin-top:4px">0/12 人</div>
+        </div>
+        <div id="call-room-2-card" style="padding:14px;border:2px solid var(--border-color);border-radius:8px;margin-bottom:12px;cursor:pointer;transition:0.15s">
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary)"><span id="call-room-2-name">语音房间 2</span> <span id="call-room-2-cur" style="display:none;font-size:11px;color:#fff;background:var(--accent);border-radius:8px;padding:1px 6px">当前</span></div>
+            <div id="call-room-2-sub" style="font-size:11px;color:var(--text-muted);margin-top:2px">语音 · 最多 6 人</div>
+            <div id="call-room-2-count" style="font-size:13px;color:var(--success);margin-top:4px">0/6 人</div>
+        </div>
+        <div id="call-open-cam-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text-primary)">
+            <input type="checkbox" id="call-open-cam" checked style="width:16px;height:16px;cursor:pointer">
+            <label for="call-open-cam" style="cursor:pointer">进房时开启摄像头</label>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center">
+            <button id="btn-call-room-cancel" class="btn" style="background:var(--btn-bg);color:var(--text-primary)">取消</button>
+            <button id="btn-call-room-hangup" class="btn" style="display:none;background:var(--btn-danger-bg);color:#fff">退出通话</button>
+        </div>
+    </div>
+</div>
+
+<!-- Screen Share Viewer -->
+<div id="screen-viewer">
+    <div id="screen-viewer-bar" style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:rgba(0,0,0,0.5);font-size:12px;color:#fff;cursor:move">
+        <span>📺 屏幕共享</span>
+        <!-- 观看者：实时网络质量（延迟 / 丢包 / 解码帧率），与语音通话的质量徽标同一套算法 -->
+        <span id="screen-viewer-stats" style="font-size:11px;color:#b8f3c0;white-space:nowrap"></span>
+        <button id="screen-audio-toggle" title="共享声音" style="background:none;border:none;color:#fff;cursor:pointer;font-size:13px">🔊</button>
+        <button id="screen-mic-toggle" title="麦克风开关" style="background:none;border:none;color:#fff;cursor:pointer;font-size:13px">🎙️</button>
+        <button id="screen-max" title="最大化" style="margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;font-size:14px">全屏</button>
+        <button id="screen-close" title="关闭" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <video id="screen-video" autoplay playsinline></video>
+    <div id="screen-resize-handle" style="position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,rgba(255,255,255,0.3) 50%)"></div>
+</div>
+
+<!-- Ambient Sound Panel -->
+<div id="ambient-panel" style="display:none;position:fixed;bottom:120px;right:16px;z-index:790;background:#1a1a2e;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);width:280px;overflow:hidden;flex-direction:column">
+    <div id="ambient-header" style="display:flex;align-items:center;gap:8px;padding:8px 14px;color:#fff;font-size:13px;background:rgba(0,0,0,0.3);cursor:move">
+        <span>🌧️ 环境音效</span>
+        <span style="flex:1"></span>
+        <button id="btn-ambient-close" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(0,0,0,0.2)">
+        <span style="color:#999;font-size:10px">🔈</span>
+        <input type="range" id="ambient-vol" min="0" max="100" value="20" style="flex:1;accent-color:#7ec0f6">
+        <span id="ambient-vol-label" style="color:#aaa;font-size:10px;min-width:28px;text-align:right">20%</span>
+    </div>
+    <div id="ambient-buttons" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px">
+        <button class="ambient-btn" data-sound="rain"    style="flex:1 1 40%;padding:10px 6px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:transparent;color:#ccc;cursor:pointer;font-size:12px;text-align:center">🌧️<br>雨声</button>
+        <button class="ambient-btn" data-sound="cafe"    style="flex:1 1 40%;padding:10px 6px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:transparent;color:#ccc;cursor:pointer;font-size:12px;text-align:center">☕<br>咖啡馆</button>
+        <button class="ambient-btn" data-sound="campfire" style="flex:1 1 40%;padding:10px 6px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:transparent;color:#ccc;cursor:pointer;font-size:12px;text-align:center">🔥<br>篝火</button>
+        <button class="ambient-btn" data-sound="white"   style="flex:1 1 40%;padding:10px 6px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:transparent;color:#ccc;cursor:pointer;font-size:12px;text-align:center">🌊<br>白噪音</button>
+    </div>
+</div>
+
+<!-- Timer Modal -->
+<div id="timer-modal" style="display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,0.5);align-items:center;justify-content:center" onmousedown="this._clickOnOverlay=(event.target===this)" onclick="if(event.target===this&&this._clickOnOverlay){if(typeof _tmClearComplete==='function')_tmClearComplete();this.style.display='none'}">
+    <div style="background:var(--bg-secondary);padding:32px;border-radius:16px;width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+            <span style="font-size:24px">🍅</span><span style="font-size:18px;font-weight:700;color:var(--text-primary)">番茄钟</span>
+            <span style="flex:1"></span>
+            <button onclick="_tmClearComplete();document.getElementById('timer-modal').style.display='none'" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px">✕</button>
+        </div>
+        <!-- Ring + long progress bar + counter -->
+        <div style="text-align:center;margin-bottom:12px">
+
+            <!-- Ring progress (daily goal) -->
+            <div style="position:relative;display:inline-block;width:100px;height:100px">
+                <svg viewBox="0 0 120 120" style="width:100px;height:100px;transform:rotate(-90deg)">
+                    <circle r="50" cx="60" cy="60" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+                    <circle id="tm-ring" r="50" cx="60" cy="60" fill="none" stroke="var(--accent)" stroke-width="8"
+                        stroke-dasharray="314.16" stroke-dashoffset="314.16" stroke-linecap="round"/>
+                </svg>
+                <div id="tm-ring-label" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);text-align:center;line-height:1.3">今日<br>0h/2h</div>
+            </div>
+            <!-- View toggle -->
+            <div style="text-align:right;margin-top:4px">
+                <button id="tm-view-toggle" onclick="_tmToggleView()" title="切换视图" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;padding:2px 6px;color:var(--text-muted)">▦</button>
+            </div>
+            <!-- Phase progress: bar view -->
+            <div id="tm-bar-wrap" style="margin-top:4px;position:relative">
+                <div id="tm-bar" style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;position:relative">
+                    <div id="tm-bar-segments" style="display:flex;height:100%"></div>
+                </div>
+                <div id="tm-bar-dot" style="position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #fff;left:0;transform:translateX(-50%);transition:left 60s linear"></div>
+                <div id="tm-bar-labels" style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-top:3px"></div>
+            </div>
+            <!-- Phase progress: grid view -->
+            <div id="tm-grid-wrap" style="display:none;margin-top:4px">
+                <div id="tm-grid" style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center"></div>
+            </div>
+        </div>
+
+        <!-- Counter display -->
+        <div id="timer-mini-display" style="font-size:48px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--accent);text-align:center;margin:8px 0">25:00</div>
+
+        <!-- Stats line -->
+        <div id="tm-stats" style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:6px"></div>
+
+        <!-- Daily chart -->
+        <div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text-secondary)">每日专注（最近7天）</div>
+        <div id="tm-chart" style="display:flex;align-items:flex-end;gap:6px;height:100px;padding:0 4px;border-left:2px solid var(--border);border-bottom:2px solid var(--border);margin-bottom:4px"></div>
+        <div id="tm-chart-labels" style="display:flex;gap:6px;padding:0 4px;font-size:9px;color:var(--text-muted);margin-bottom:10px"></div>
+
+        <!-- Inputs -->
+        <div style="display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:8px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap">
+            工作<input id="tm-work" type="number" value="25" min="1" max="120" style="width:48px;padding:4px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;text-align:center">分
+            休息<input id="tm-break" type="number" value="5" min="1" max="60" style="width:48px;padding:4px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;text-align:center">分
+            轮次<input id="tm-cycles" type="number" value="4" min="1" max="20" style="width:44px;padding:4px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;text-align:center">
+            <button onclick="timerCardApplyPomo()" style="padding:6px 14px;border:1px solid var(--accent);border-radius:6px;background:transparent;color:var(--accent);cursor:pointer;font-size:12px">应用</button>
+            <span style="margin-left:8px">目标</span>
+            <input id="tm-goal" type="number" value="2" min="1" max="12" style="width:44px;padding:4px;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-input);color:var(--text-primary);font-size:12px;text-align:center">h
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;gap:12px;justify-content:center">
+            <button id="timer-card-start" onclick="timerCardStartStop()" style="padding:10px 32px;border:none;border-radius:8px;background:#4caf50;color:#fff;cursor:pointer;font-size:15px;font-weight:600">开始</button>
+            <button id="timer-card-reset" onclick="timerCardReset()" style="padding:10px 32px;border:none;border-radius:8px;background:var(--btn-bg);color:var(--text-primary);cursor:pointer;font-size:15px">重置</button>
+        </div>
+    </div>
+</div>
+<!-- Random Picker Modal -->
+<div id="random-modal" style="display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,0.5);align-items:center;justify-content:center" onmousedown="this._clickOnOverlay=(event.target===this)" onclick="if(event.target===this&&this._clickOnOverlay){if(typeof _tmClearComplete==='function')_tmClearComplete();this.style.display='none'}">
+    <div style="background:var(--bg-secondary);padding:32px;border-radius:16px;width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px">
+            <span style="font-size:24px">🎲</span><span style="font-size:18px;font-weight:700;color:var(--text-primary)">随机决策</span>
+            <span style="flex:1"></span>
+            <button onclick="document.getElementById('random-modal').style.display='none'" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px">✕</button>
+        </div>
+        <div style="margin-bottom:16px">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">输入选项，空格或换行分隔：</div>
+            <textarea id="random-options-input" rows="3" placeholder="火锅 烧烤 日料&#10;每行一个也行" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-input);color:var(--text-primary);font-size:14px;resize:vertical;outline:none;font-family:inherit"></textarea>
+        </div>
+        <button onclick="randomPick()" style="width:100%;padding:12px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-size:15px;font-weight:600;margin-bottom:12px">🎯 帮我选！</button>
+        <div id="random-result" style="font-size:28px;font-weight:800;color:var(--accent);text-align:center;min-height:40px;transition:transform 0.15s"></div>
+    </div>
+</div>
+
+<!-- Private Chat Modal -->
+<div id="private-modal">
+    <div class="pm-header"><span id="pm-title">私聊</span><button class="pm-close">✕</button></div>
+    <div class="pm-messages" id="pm-messages"></div>
+    <div class="pm-input">
+        <input type="text" id="pm-input" placeholder="输入私聊消息...">
+        <button id="pm-send">发送</button>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal">
+    <div class="settings-card" style="max-height:70vh;overflow-y:auto">
+        <h2>设置</h2>
+        <div class="setting-row" data-mobile="hide">
+            <span>消息字体</span>
+            <select id="setting-font">
+                <option value="sans-serif">Sans Serif</option>
+                <option value="serif">Serif</option>
+                <option value="monospace">Monospace</option>
+                <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+                <option value="'SimSun', serif">宋体</option>
+                <option value="'KaiTi', serif">楷体</option>
+                <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                <option value="'Courier New', monospace">Courier New</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <span>字号</span>
+            <input type="range" id="setting-fontsize" min="10" max="20" value="14" step="1" style="width:120px">
+            <span id="fontsize-label" style="font-size:12px;color:var(--text-muted);width:30px">14px</span>
+        </div>
+        <div class="setting-row" data-mobile="hide">
+            <span>麦克风</span>
+            <select id="setting-mic"></select>
+        </div>
+        <!-- 语音测试（桌面端用；手机端由 data-mobile 隐藏 —— 用户 2026-09-24 要求手机取消该功能） -->
+        <div data-mobile="hide" style="margin:4px 0 10px;padding:10px 12px;background:var(--bg-tertiary);border-radius:8px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span style="font-size:13px;font-weight:600;color:var(--text-primary)">🎤 语音测试</span>
+                <button class="btn" style="background:var(--accent);color:#fff;padding:3px 12px;font-size:11px" id="btn-voice-test">开始测试</button>
+                <span id="voice-test-status" style="font-size:10px;color:var(--text-muted)">点击测试麦克风</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-size:10px;color:var(--text-muted);min-width:24px">音量</span>
+                <div id="voice-level-bar" style="flex:1;height:6px;background:var(--border-color);border-radius:3px;overflow:hidden">
+                    <div id="voice-level-fill" style="height:100%;width:0;background:#4caf50;transition:width 0.08s;border-radius:3px"></div>
+                </div>
+                <span id="voice-level-text" style="font-size:9px;color:var(--text-muted);min-width:24px">-∞</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-size:10px;color:var(--text-muted);min-width:24px">监听</span>
+                <input type="range" id="voice-sidetone-vol" min="0" max="100" value="30" style="flex:1;accent-color:#4caf50;height:4px">
+                <span id="voice-sidetone-label" style="font-size:9px;color:var(--text-muted);min-width:24px">30%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px">
+                <span style="font-size:10px;color:var(--text-muted);margin-right:2px">降噪</span>
+                <button class="voice-nr-btn" data-nr="0" style="padding:2px 8px;font-size:10px">○ 关</button>
+                <button class="voice-nr-btn" data-nr="1" style="padding:2px 8px;font-size:10px">◐ 柔和</button>
+                <button class="voice-nr-btn nr-active" data-nr="2" style="padding:2px 8px;font-size:10px">● 强力</button>
+            </div>
+        </div>
+        <div class="setting-row" data-mobile="hide">
+            <span>摄像头</span>
+            <select id="setting-cam"></select>
+        </div>
+        <div class="setting-row" data-mobile="hide">
+            <span>屏幕共享默认清晰度</span>
+            <select id="setting-screen-quality">
+                <option value="480p">480p 标清</option>
+                <option value="720p">720p 高清</option>
+                <option value="1080p">1080p 全高清</option>
+                <option value="2k">2K（2560×1440，更吃带宽）</option>
+            </select>
+        </div>
+        <div class="setting-row" data-mobile="hide">
+            <span>屏幕共享帧率</span>
+            <select id="setting-screen-fps">
+                <option value="24">24 fps</option>
+                <option value="36">36 fps</option>
+                <option value="48">48 fps</option>
+                <option value="60">60 fps（需要更多带宽）</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <span>通知音音量</span>
+            <input type="range" id="setting-notify-vol" min="0" max="100" value="40" step="5" style="width:100px">
+        </div>
+        <div class="setting-row">
+            <span>新手引导</span>
+            <button class="btn" style="background:var(--btn-bg);color:var(--text-primary)" id="btn-show-guide">查看</button>
+        </div>
+        <div class="setting-row" data-mobile="hide">
+            <span>发送习惯</span>
+            <select id="setting-send-mode">
+                <option value="enter" selected>Enter 发送</option>
+                <option value="ctrl">Ctrl+Enter 发送</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <span>修改密码</span>
+            <button class="btn" style="background:var(--btn-bg);color:var(--text-primary)" id="btn-change-pwd">修改</button>
+        </div>
+        <div class="setting-row" style="border-bottom:none">
+            <span>切换账号</span>
+            <button class="btn" style="background:var(--btn-danger-bg);color:#fff" id="btn-switch-account">退出登录</button>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-settings-close">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="pwd-modal" style="display:none;position:fixed;inset:0;z-index:950;background:var(--bg-overlay);align-items:center;justify-content:center">
+    <div style="background:var(--bg-secondary);padding:30px;border-radius:var(--radius-lg);width:360px;box-shadow:var(--shadow-lg)">
+        <h2 style="margin-bottom:16px">修改密码</h2>
+        <div class="form-group"><label>旧密码</label><input type="password" id="pwd-old" maxlength="18"></div>
+        <div class="form-group"><label>新密码</label><input type="password" id="pwd-new" maxlength="18"></div>
+        <div class="error-msg" id="pwd-error"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+            <button class="btn" style="background:var(--btn-bg);color:var(--text-primary)" id="btn-pwd-cancel">取消</button>
+            <button class="btn btn-primary" id="btn-pwd-confirm">确认</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Context Menu -->
+<div id="context-menu">
+    <div class="context-item" data-action="reply">💬 引用回复</div>
+    <div class="context-item" data-action="copy">📋 复制文字</div>
+    <div class="context-item" data-action="recall">↩ 撤回</div>
+    <div class="context-item" data-action="private-chat">🔒 私聊</div>
+    <div class="context-item" data-action="at-mention">@ 提及</div>
+    <div class="context-item" data-action="mute">🔇 静音</div>
+</div>
+
+<!-- File Overview Modal -->
+<div id="files-modal" style="display:none;position:fixed;inset:0;z-index:950;background:var(--bg-overlay);align-items:center;justify-content:center">
+    <div style="background:var(--bg-secondary);padding:24px;border-radius:var(--radius-lg);width:500px;max-height:60vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="font-size:18px">📂 聊天文件</h2>
+            <button class="btn" style="background:var(--btn-bg);color:var(--text-primary);padding:4px 12px" id="btn-files-close">✕</button>
+        </div>
+        <div id="files-list" style="overflow-y:auto;flex:1;font-size:13px;color:var(--text-primary)"></div>
+        <div style="margin-top:12px;font-size:11px;color:var(--text-muted);text-align:center">点击文件下载 · 图片可预览</div>
+    </div>
+</div>
+
+<!-- Search Modal -->
+<div id="search-modal" style="display:none;position:fixed;inset:0;z-index:950;background:var(--bg-overlay);align-items:center;justify-content:center">
+    <div style="background:var(--bg-secondary);padding:20px;border-radius:var(--radius-lg);width:480px;max-height:70vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:16px;font-weight:600;color:var(--text-primary)">🔍 搜索消息</span>
+            <button class="btn" style="background:var(--btn-bg);color:var(--text-primary);padding:4px 12px" id="btn-search-close">✕</button>
+        </div>
+        <input type="text" id="search-keyword" placeholder="关键词（空格分隔多个词，留空=全部）" style="width:100%;padding:8px;border:1px solid var(--border-input);border-radius:4px;font-size:13px;background:var(--bg-input);color:var(--text-primary);outline:none" autocomplete="off">
+        <div style="display:flex;gap:8px">
+            <input type="text" id="search-sender" placeholder="发言人昵称" list="search-sender-list" style="flex:1;padding:8px;border:1px solid var(--border-input);border-radius:4px;font-size:13px;background:var(--bg-input);color:var(--text-primary);outline:none" autocomplete="off">
+            <datalist id="search-sender-list"></datalist>
+            <input type="date" id="search-date" style="flex:1;padding:8px;border:1px solid var(--border-input);border-radius:4px;font-size:13px;background:var(--bg-input);color:var(--text-primary);outline:none">
+        </div>
+        <!-- 搜索历史 -->
+        <div id="search-history" style="display:none;flex-wrap:wrap;gap:4px;font-size:11px"></div>
+        <div style="display:flex;gap:8px;align-items:center">
+            <span id="search-count" style="font-size:12px;color:var(--text-muted);flex:1"></span>
+            <button class="btn" style="background:var(--btn-bg);color:var(--text-primary);padding:4px 10px" id="btn-search-prev">▲ 上一条</button>
+            <button class="btn" style="background:var(--btn-bg);color:var(--text-primary);padding:4px 10px" id="btn-search-next">▼ 下一条</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Lightbox -->
+<div id="img-lightbox" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center">
+    <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px" id="img-counter"></div>
+    <div style="position:absolute;top:10px;right:10px;display:flex;gap:8px">
+        <button class="lightbox-btn" onclick="rotateImg(-90)" title="逆时针旋转">↺</button>
+        <button class="lightbox-btn" onclick="rotateImg(90)" title="顺时针旋转">↻</button>
+        <button class="lightbox-btn" onclick="zoomImg(0.2)" title="放大">➕</button>
+        <button class="lightbox-btn" onclick="zoomImg(-0.2)" title="缩小">➖</button>
+        <button class="lightbox-btn" onclick="resetImg()" title="重置">1:1</button>
+        <button class="lightbox-btn" onclick="saveImg()" title="下载">⬇</button>
+        <button class="lightbox-btn" onclick="closeLightbox()" title="关闭" style="font-size:20px">✕</button>
+    </div>
+    <button onclick="prevImg()" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:36px;cursor:pointer;padding:10px;border-radius:4px">‹</button>
+    <img id="img-preview" style="max-width:85%;max-height:85%;object-fit:contain;transition:transform 0.2s" src="">
+    <button onclick="nextImg()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:36px;cursor:pointer;padding:10px;border-radius:4px">›</button>
+    <div style="position:absolute;bottom:10px;color:#aaa;font-size:12px">滚轮缩放 · 拖拽移动 · 方向键切换</div>
+</div>
+
+<style>
+.lightbox-btn { width:32px;height:32px;border:none;background:rgba(255,255,255,0.15);color:#fff;border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center }
+.lightbox-btn:hover { background:rgba(255,255,255,0.3) }
+</style>
+
+<!-- Scripts -->
+<script src="config.js?v=202609251407"></script>
+<script src="js/app.js?v=202609251407"></script>
+<script src="js/chat.js?v=202609251407"></script>
+<script src="js/webrtc.js?v=202609251407"></script>
+<script src="js/screen.js?v=202609251407"></script>
+<script src="js/file.js?v=202609251407"></script>
+</body>
+</html>
