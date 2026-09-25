@@ -1,0 +1,47 @@
+/* ===== Dark Theme — 柔和护眼 ===== */
+[data-theme="dark"] {
+    --bg-primary: #242838;
+    --bg-secondary: #2a3146;
+    --bg-tertiary: #1f3555;
+    --bg-hover: #2e354a;
+    --bg-input: #2a3146;
+    --bg-userlist: #262c3e;
+    --bg-msg-self: #253a55;
+    --bg-msg-other: #2a3345;
+    --bg-msg-private: #3d2535;
+    --bg-msg-system: transparent;
+    --bg-code: #1e2538;
+    --bg-overlay: rgba(0,0,0,0.6);
+    --bg-tooltip: #4a5068;
+    --bg-video: #121620;
+
+    --text-primary: #d8dce6;
+    --text-secondary: #a8afc0;
+    --text-muted: #7a8296;
+    --text-inverse: #242838;
+    --text-link: #7ec0f6;
+
+    --border-color: #364060;
+    --border-light: #2e3850;
+    --border-input: #445070;
+
+    --accent: #7ec0f6;
+    --accent-hover: #5fa8e8;
+    --accent-light: rgba(126, 192, 246, 0.12);
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.25);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.35);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+
+    --nick-self: #7ec0f6;
+    --nick-other: #ffb74d;
+    --private-tag: #ef6c6c;
+    --quote-bar: #7ec0f6;
+
+    --btn-bg: #364060;
+    --btn-bg-hover: #445070;
+    --btn-primary-bg: #2979c8;
+    --btn-primary-hover: #1e6cb8;
+    --btn-danger-bg: #c04141;
+    --btn-danger-hover: #a83838;
+}
