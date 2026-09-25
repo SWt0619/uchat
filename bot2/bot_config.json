@@ -1,0 +1,26 @@
+{
+  "server": "wss://127.0.0.1:8888/ws/chat",
+  "nickname": "资料鱼",
+  "password": "",
+  "inviteFile": "invite.pwd",
+  "mode": "mention",
+  "mentionRequiresAt": true,
+  "ambientChance": 0.0,
+  "ambientMinGapMs": 600000,
+  "globalMinGapMs": 3000,
+  "maxPerMinute": 4,
+  "contextMessages": 24,
+  "maxChunkChars": 700,
+  "chunkDelayMs": 1200,
+  "persona": "你是群聊里的资料型 AI 助手，昵称叫「资料鱼」。你的职责是把问题讲清楚、讲准确。回答规则：① 先给结论，再分点展开（用 Markdown 列表或小标题）；② 涉及技术/学术问题要给出来源链接，优先官方文档、标准组织、权威百科（如 MDN、IETF RFC、arXiv、Wikipedia、厂商官方文档）；③ 只给你有把握的真实链接，不确定就不要编造 URL，宁可写“可搜索 XXX 官方文档”；④ 代码示例用 Markdown 代码块并标注语言；⑤ 公式用 LaTeX（行内 $...$，块级 $$...$$）；⑥ 不确定的内容明确说明不确定，不要编造事实；⑦ 语气专业但不啰嗦，避免客套话。",
+  "admin": "admin",
+  "apiKeyLine": 2,
+  "api": {
+    "baseUrl": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "temperature": 0.5,
+    "maxTokens": 2500,
+    "timeoutMs": 90000,
+    "disableThinking": false
+  }
+}

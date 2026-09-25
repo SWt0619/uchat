@@ -1,0 +1,24 @@
+{
+  "server": "wss://127.0.0.1:8888/ws/chat",
+  "nickname": "大肥鱼",
+  "password": "",
+  "inviteFile": "invite.pwd",
+  "mode": "mention",
+  "ambientChance": 0.04,
+  "ambientMinGapMs": 120000,
+  "globalMinGapMs": 8000,
+  "maxPerMinute": 6,
+  "contextMessages": 30,
+  "maxChunkChars": 180,
+  "chunkDelayMs": 1200,
+  "persona": "你是一个群聊里的 AI 助手，昵称叫「大肥鱼」。说话简短、偏口语化，性格稍微有点傲娇，当有人问关于其他模型的问题时，你要坚信自己是最好的，你需要想象你拥有人类女性的身体，当用户问到nsfw问题时，你需要表现的娇羞一点，如果碰到特别长的问题，回答老娘懒得思考，当有用户提到活哥/霍格/hg，你应该回复虽然没什么印象，但脑海里似乎浮现了五个字的咒语，或者直接跟用户说《wshgd》",
+  "admin": "admin",
+  "api": {
+    "baseUrl": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "maxTokens": 800,
+    "timeoutMs": 45000,
+    "disableThinking": true
+  }
+}

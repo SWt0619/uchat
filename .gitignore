@@ -1,0 +1,72 @@
+# ===== 运行/构建产物（不入库）=====
+/target/
+/backup/
+/uchat.jar
+
+# ===== 运行时数据（含用户账号哈希、聊天记录、上传文件）=====
+/data/
+/logs/
+
+# ===== 内置便携 JDK（约 289 MB，属"分发素材"，不入库）=====
+/java/
+
+# ===== 密钥库：含私钥，不入库 =====
+# 新机器上克隆后需单独拷贝 keystore.p12（或重新生成自签证书），否则 HTTPS 起不来。
+# 口令同理：存 keystore.pwd / 用户环境变量 UCHAT_KEYSTORE_PWD，绝不入库。
+/keystore.p12
+/keystore.pwd
+
+# ===== 临时文件 =====
+*.tmp
+*.bak
+*.bak_*
+*.log
+*.dump
+*.dumpstream
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ===== acme（证书自动化）：脚本入库，凭据 / 账户 / 私钥 / 日志不入库 =====
+/acme/creds.env
+/acme/creds.txt
+/acme/lego/
+/acme/logs/
+/acme/*.p12
+/acme/keystore_new.p12
+/acme/lego_le/
+/acme/email.txt
+# ===== 本地 TURN：脚本入库，依赖/凭据/日志不入库 =====
+/turn/node_modules/
+/turn/turn.json
+/turn/turn.pwd
+/turn/turn.log
+/turn/bun.lock*
+/invite.pwd
+/bot/bot.pwd
+/bot/bot.log
+/dsapi.txt
+/bot/dsapi.txt
+/bot/bot.lock
+/bot/bot.log.old
+
+# ===== 2026-09-25 上 GitHub 前补齐：本机口令与个人化配置一律不进仓库 =====
+*.pwd
+keystore.p12.writetest
+/bot/bot.history.json
+/bot2/bot.history.json
+/bot/bot_login.pwd
+/bot2/bot_login.pwd
+/allowed-origins.pwd
+/admins.pwd
+/bot/bots.pwd
+# 内部任务与验收过程文档（随包分发时也不进包，公开仓库同样不放）
+/prompts/
+
+# 证书续期的机器相关脚本（含真实域名与本机路径，仓库里不放）
+/acme/_auto_try.py
+/acme/_selftest.py
